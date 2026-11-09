@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package marketplace.v1;
+
+option go_package = "github.com/usmanvirk/contract-checks/gen/marketplace/v1;marketplacev1";
+
+enum Grade {
+  GRADE_UNSPECIFIED = 0;
+  GRADE_EXCELLENT = 1;
+  GRADE_GOOD = 2;
+  GRADE_FAIR = 3;
+}
+
+message Money {
+  int64 cents = 1;
+  string currency = 2;
+}
+
+message Listing {
+  string id = 1;
+  string sku = 2;
+  string title = 3;
+  Grade grade = 4;
+  Money price = 5;
+  repeated string image_urls = 6;
+  bool in_stock = 7;
+  string seller_id = 8;
+
+  // Added. An old client ignores an unknown field, so this is safe.
+  Money original_price = 9;
+  string battery_health = 10;
+}
+
+message GetListingRequest {
+  string id = 1;
+}
+
+message SearchRequest {
+  string query = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  repeated Grade grades = 4;
+
+  // Added, and optional on the server.
+  string seller_id = 5;
+}
+
+message SearchResponse {
+  repeated Listing listings = 1;
+  string next_page_token = 2;
+  int32 total = 3;
+}
+
+message WatchRequest {
+  string listing_id = 1;
+  string person_id = 2;
+}
+
+message WatchResponse {
+  bool watching = 1;
+}
+
+// A new message, which nothing shipped refers to yet.
+message PriceHistoryRequest {
+  string listing_id = 1;
+}
+
+message PriceHistoryResponse {
+  repeated Money prices = 1;
+}
+
+service Catalogue {
+  rpc GetListing(GetListingRequest) returns (Listing);
+  rpc Search(SearchRequest) returns (SearchResponse);
+  rpc Watch(WatchRequest) returns (WatchResponse);
+
+  // A new endpoint. Old clients simply do not call it.
+  rpc PriceHistory(PriceHistoryRequest) returns (PriceHistoryResponse);
+}

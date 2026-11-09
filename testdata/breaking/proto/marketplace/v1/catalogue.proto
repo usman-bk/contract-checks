@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package marketplace.v1;
+
+option go_package = "github.com/usmanvirk/contract-checks/gen/marketplace/v1;marketplacev1";
+
+// GRADE_FAIR removed, and a new value added.
+enum Grade {
+  GRADE_UNSPECIFIED = 0;
+  GRADE_EXCELLENT = 1;
+  GRADE_GOOD = 2;
+  GRADE_ACCEPTABLE = 4;
+}
+
+message Money {
+  int64 cents = 1;
+  string currency = 2;
+}
+
+message Listing {
+  string id = 1;
+  string sku = 2;
+
+  // Renamed. The number is the same, so binary clients cope and anything
+  // reading JSON does not.
+  string name = 3;
+
+  Grade grade = 4;
+
+  // Was the Money message, now a bare integer.
+  int64 price = 5;
+
+  // Was repeated.
+  string image_urls = 6;
+
+  reserved 7; // in_stock, retired properly, and still gone
+
+  string seller_id = 8;
+}
+
+message GetListingRequest {
+  string id = 1;
+}
+
+message SearchRequest {
+  string query = 1;
+
+  // Widened on the server and narrower on the wire.
+  int64 page_size = 2;
+
+  string page_token = 3;
+  repeated Grade grades = 4;
+}
+
+message SearchResponse {
+  repeated Listing listings = 1;
+  string next_page_token = 2;
+
+  // Number 3 now means something else entirely.
+  bool has_more = 3;
+}
+
+message WatchRequest {
+  string listing_id = 1;
+  string person_id = 2;
+}
+
+service Catalogue {
+  rpc GetListing(GetListingRequest) returns (Listing);
+
+  // Was unary.
+  rpc Search(SearchRequest) returns (stream SearchResponse);
+
+  // Watch and its response message are gone.
+}

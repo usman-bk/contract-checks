@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The tool compares against the merge base, so it needs the history
+          # to find one. The default shallow checkout has no merge base with
+          # anything and the job fails with a confusing git error.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - run: go build ./...
+      - run: go vet ./...
+      - name: Formatting
+        run: |
+          u=$(gofmt -l .)
+          if [ -n "$u" ]; then echo "gofmt would change:"; echo "$u"; exit 1; fi
+
+      - run: go test -race ./...
+
+      # The tool run against its own fixtures, so a change that breaks the
+      # command without breaking a unit test is still caught.
+      - name: Check the compatible fixture passes
+        run: go run ./cmd/contractcheck -base-dir testdata/base/proto -head-dir testdata/compatible/proto
+
+      - name: Check the breaking fixture fails
+        run: |
+          if go run ./cmd/contractcheck -base-dir testdata/base/proto -head-dir testdata/breaking/proto; then
+            echo "the breaking fixture exited 0, so the check is not checking"
+            exit 1
+          fi
